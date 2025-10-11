@@ -13,8 +13,8 @@ Univeristy of California, Berkeley
 
 Coursework Completed:
 
-  Statistics
-  Experiment Design
-  Data Engineering
-  Machine Learning
-  Natural Language Processing with Deep Learning(in progress)
+  - Statistics
+  - Experiment Design
+  - Data Engineering
+  - Machine Learning
+  - Natural Language Processing with Deep Learning(in progress)
