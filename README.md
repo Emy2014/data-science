@@ -16,5 +16,6 @@ Coursework Completed:
   - Statistics
   - Experiment Design
   - Data Engineering
-  - Machine Learning
+  - Applied Machine Learning
+  - Experiments and Causal Inference
   - Natural Language Processing with Deep Learning(in progress)
