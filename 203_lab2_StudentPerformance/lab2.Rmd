@@ -1,0 +1,288 @@
+---
+title: "Lab 2: Student Perfomance"
+subtitle: "https://github.com/mids-w203/lab2_StudentPerformance"
+author: "Theo Abraham, Yiwen Hou, Rohan Kapur, Carla Tapia"
+date: "April 18, 2025"
+date-format: long
+output: pdf_document
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning = FALSE)
+```
+
+```{r load packages, include=FALSE}
+options(repos=c(CRAN="https://cran.r-project.org"))
+library(fec16)
+library(tidyverse)
+library(patchwork)
+library(stargazer)
+library(sandwich)
+library(lmtest)
+library(broom)
+library(knitr)
+library(dplyr)
+```
+
+```{r}
+clean_data = read.csv('data/model/clean_student_performance.csv')
+```
+
+```{r}
+clean_data$Attendance <- factor(clean_data$Attendance)
+
+clean_data$Preparation <-factor(clean_data$Preparation,
+                          levels = c("0-1 Hour", "2-3 Hours","More than 3 Hours"),
+                          labels = c("0-1 Hour", "2-3 Hours", "More than 3 Hours"))
+
+clean_data$Gender <-factor(clean_data$Gender,
+                     levels = c("Male", "Female"),
+                     labels = c("Male", "Female"))
+```
+
+\newpage
+
+# Introduction and Context
+
+Despite the significant investment in time and financial resources that is incurred by most students who start an undergraduate program, the overall graduation rate for students attending undergraduate courses in the United States was only 64% in 2020. Still, a four-year college degree is the most important indicator of economic success, and a lot of research has been conducted to determine why some students are successful in college while others fail to earn a degree. We pose the question:
+
+> *Is academic performance in high school a good predictor of success in college?*
+
+We propose that students who have higher GPAs in high school do well in college, either because they develop good study habits in high school or because they are exposed to more preparatory material in the form of honors and AP courses. For the purpose of this research, we will compare students’ GPAs from high school (X random variable) with their cumulative GPAs in college (Y variable) to build a linear regression model, which we will use to test for a consistent correlation.
+
+# Data and Methodology
+
+To answer our research question we utilize the Student Performance Metrics Dataset from mendeley.com, which is a survey of undergraduate students from a university in Malaysia. This dataset includes attributes such as Gender, High School GPA, Family Income, Computer Usage, proficiency in English, Class Attendance, Study time outside class, Extra Curricular activities, and Overall College GPA. The survey was based on a structured questionnaire that was filled out by students who volunteered to participate in the study. The dataset is relatively clean and robust with 443 individual records. This report will be focus on and analyze students in the Computer Science and Engineering department.
+
+To better understand the data and the relationships inherent in the variables, we built two linear models based on the Mendeley dataset described above. The first model is a simple credible model in which we build a relationship between students' High School GPAs, captured in the 'HSC' column of the dataset, and their overall College GPAs, captured in the 'Overall' column. We call this the "simple model" and propose the following hypothesis:
+
+> **H~0~**: There is no relationship between highschool GPA and acamedic performance in college (college GPAs).
+
+The second model, which we call the "complex model," includes two additional X variables and compares students' High School GPA, their college class attendance, captured in the 'Attendance' column, and student gender, captured in the 'Gender' column, against their performance in college. The purpose of this model is to go beyond the distribution presented by high school and college GPAs and to discover the more complex relationships in our data. The decision to use Gender and Attendance was decided based on external research that uncovered attendance positively affecting class grade and overall GPA (The New School) and females tending to outperform males academically in higher education (Verbree et al., 2022). Our null hypothesis for this models is as follows:
+
+> **H~0~**: There is no relationship between, on one hand, highschool GPA, college class attendence, and student gender, and, on the other hand, student performance in college.
+
+To explore this complex model further, the scatter plot below demonstrates students' College GPAs vs. High School GPAs separated by Gender and color-coded by Attendance level. We noticed both male and female students with high attendance levels had high high school and college GPAs which follows our initial proposal. The opposite occurs for male and female students with low attendance levels, they tend to have lower high school and college GPAs. Overall, there is an observed trend that students with higher high school GPAs tend to also have higher college GPAs.
+
+```{r scatterplot}
+gpa_plot <- ggplot(clean_data, aes(x = HSC, y = Overall, color = Attendance))+ 
+  geom_point(size = 2)+
+  facet_wrap(~ Gender)+
+  labs(title = "Scatterplot of College GPA vs High School GPA", x = "High School GPA", 
+       y = "College GPA", color = "Attendance")+
+  scale_color_manual(values = c(
+    "Extremely Low Attendance" = "#96221b", "Low" = "#fb6b27", "Medium" = "#fecb3f", "High" = "#1a9850"),  
+    breaks = c("High", "Medium", "Low", "Extremely Low Attendance")) +
+  theme_minimal()+
+  theme(legend.position = "top", legend.key.height = unit(0.5, "cm"),
+        legend.key.width = unit(0.4, "cm"), legend.text = element_text(size = 7.5),
+        legend.title = element_text(size = 8.5))+
+  theme(axis.text.x = element_text(angle = 30, hjust = 1)) 
+```
+
+```{r plot}
+#| label: fig-plots
+#| fig.cap: 'College vs. High School GPA by Gender & Attendance'
+#| fig.width: 10
+#| fig.height: 3
+#| fig.pos: H
+
+gpa_plot
+```
+
+# Model Specification & Assumptions
+
+```{r regression models}
+simple <- lm(data = clean_data, Overall ~ HSC)
+complex <- lm(data = clean_data, Overall ~ HSC + Gender + Attendance)
+```
+
+The following assumptions were assessed to ensure the dataset was viable for our proposed linear regression use.
+
+**1. I.I.D. data (Independent and Identically Distributed):** The IID assumption is not fully met as the data is collected only from students at the University Malaya in Malaysia which introduces geographical bias. We acknowledge that there might be conditions specific to the undergraduate experience in Malaysia that are not relevant to students in other parts of the world. Additionally, the data resulted from survey responses, so there may be some bias as some students may have decided to not respond or opt-ed out. Lastly, we are observing data from students only in the Computer Science department. We do believe the sample is still a good representation of the Computer Science department and the CS department gender distribution. Though we acknowledge these discrepancies, the dataset contains a large amount of data that would be necessary and useful to answering our research question.
+
+**2. Linear Conditional Expectation:** The linear conditional expectation assumption is met for both models. The predicted and residual values for these models, and each individual variable, were plotted onto a scatter plot and the average of the residuals stays centered at 0. These plots are shown in the Appendix. Given this assumption we proceed to use a simple linear function to model the relationship between academic performance in high school (High School GPA) and performance in college (College GPA), in the case of the simple model. And a multivariate linear function to model the relationship between academic performance in high school (High School GPA) and performance in college (College GPA), Gender, and Class Attendance, in the case of the complex model.
+
+**3. No Perfect Collinearity:** A correlation matrix was developed to assess if perfect collinearity between the variables exists. Through this evaluation, none of the variables presented perfect collinearity which is shown in the Appendix. Though this assumption is satisfied, we did note that Attendance and High School GPA had a correlation of 0.339, indicating a moderate positive relationship between these two variables.
+
+**4. Homoskedastic Errors:** Through the use of the Breusch-Pagen test, the simple model produced a p-value of 0.2725, which meant the model exhibited homoskedastic errors as we fail to reject the null hypothesis that the error variances are homoskedastic. The complex model produced a p-value of 0.007165, exhibiting heteroskedastic errors as we reject the null. To correct this, robust standard errors were utilized in our estimates shown in the regression coefficient table.
+
+**5. Normally Distributed Errors:** A histogram and QQ plot of the model residuals were plotted to ensure normality. Both models exhibited a relatively normal distribution with a minor left skew which was verified with the QQ plot. These plots can be observed in the Appendix.
+
+# Results & Analysis
+
+After ensuring assumption compliance, the below stargazer table exhibits the output of each specified model: simple & complex.
+
+```{r robust std erros}
+simplerobust <- sqrt(diag(vcovHC(simple)))
+complex_robust <- sqrt(diag(vcovHC(complex)))
+```
+
+```{r stargazer table, results = "asis"}
+cat("\\begin{center}\\small")
+stargazer(simple, complex, type = "latex", title = "Simple \\& Complex Linear Regresion Model Summaries", column.labels = c("Simple model", "Complex model"), se = list(simplerobust, complex_robust), order = c("HSC", "Female", "Low", "Medium", "High"),dep.var.labels = "Overall College GPA", covariate.labels = c("High School GPA", "Female", "Low Attendance", "Medium Attendance", "High Attendance"),header = FALSE, float = FALSE, single.row = TRUE, no.space = TRUE, column.sep.width = "1pt", font.size = "small", digits = 2)
+cat("\\end{center}")
+```
+
+***Simple linear model:*** College GPA = 1.97 + 0.29 High School GPA
+
+***Complex linear model:*** College GPA = 1.41 + 0.05 High School GPA + 0.13 Female + 1.09 Low Attendance + 1.38 Mid Attendance + 1.91 High Attendance
+
+For the simple mode, High School GPA accounts for about 6% of College GPA, based on R² value. After adding Gender and Attendance variables, the model’s explanatory power improved significantly — from 6% to 43% based on adjusted R² value. The model showed that female students had, on average, 0.13 higher GPA compared to male students, holding other variables constant. From all X variables, Attendance is the biggest contributor for College GPA. All Attendance-related variables are statistically significant, and had a relatively high coefficient number. Students in the low attendance group had 1.09 higher GPA compared to student who fell in the extremely low attendance group, holding other variables constant. The data clearly reflects a real-world pattern — higher levels of attendance are associated with much higher college GPA.
+
+While Attendance alone accounts for only about 10% of the variation in College GPA, the substantial increase in R² when it is included in the model suggests that Attendance may be capturing the influence of other underlying factors. These could include knowledge proficiency, time spent studying, or overall student engagement — all of which are likely associated with both higher attendance and better academic performance. This can be useful for educators and those in education policy to understand the importance of attendance and how to improve attendance for struggling students.
+
+```{r anova results}
+anova(simple, complex, test="F")
+```
+
+To test whether the additional variables in our complex model significantly improve the model's explanatory power compared to the simple model, we conducted an analysis of variance using an F-test. The null hypothesis is that the simple model, with only High School GPA, as a predictor fits the data just as well as the model with gender and attendance as additional predictors. The F statistic of 72.88 is large and the associated P value is 2.2e-16 which is well below the significance threshold of 0.05. These two values give us more than enough evidence to reject the null hypothesis. Therefore the complex model which includes more variables provides a significantly better it to the data. To conclude, the variables Gender and Attendance improves our ability to predict the college GPA. 
+
+# Conclusion
+
+Our simple linear regression model returned an adjusted R² value of 0.062 and the complex model returned an R² value of 0.432, indicating minimal correlation in the simple model and moderate correlation in the complex model. The relatively low value for R² in the simple model suggests that variation in college GPAs are not adequately explained by academic outcomes in high school alone. This requires that we consider other factors, other than high school GPA, which are more likely to contribute to academic success in college. The complex model, which included student Gender and Attendance had a higher R² value which suggests that these two factors are more likely to explain variability in college GPAs. However, we also noticed some collinearity between high school GPA and attendance levels in college (see Appendix for collinearity tests). This alone is not surprising and simply suggests that students who did better in high school are more likely to attend classes regularly in college. The substantial increase in R² when it is included in the model suggests that Attendance may be capturing the influence of other underlying factors, knowledge proficiency, time spending on study etc. The remaining variable in the complex model, student Gender, likely affects variability in college GPAs to a greater extent and further research on this dataset will likely definitively show that students of a certain gender are more likely to have higher GPAs in college.
+
+\newpage
+
+# Appendix
+**References:** https://guidetoteaching.newschool.org/why-attendance-matters/
+
+http://pmc.ncbi.nlm.nih.gov/articles/PMC9379878/
+
+**Data Source:** https://data.mendeley.com/datasets/5b82ytz489/1
+
+https://github.com/mids-w203/lab2_StudentPerformance/blob/main/data/model/clean_student_performance.csv
+
+The data wrangling R file can be found in the src folder. 
+
+**Additional Models:** We developed a two additional models prior to deciding on the two used in this report. The first model included HS GPA and Gender as our X variables with college GPA as our Y variable. When doing analysis, we noted the complex model used in this report performed better so we ultimately went with that model. The other model included Attendance as the X Variable and college GPA as our Y, which was a stronger model than the first one but our complex model still performed better. 
+
+**IID Assumption:** There are `r table(clean_data$Gender)["Male"]` males and `r table(clean_data$Gender)["Female"]` females in the dataset.
+
+```{r linear conditional expectation}
+complex_data <- data.frame(clean_data$Overall,clean_data$HSC,clean_data$Gender,clean_data$Attendance)
+simple_data <- data.frame(clean_data$Overall,clean_data$HSC,clean_data$Gender,clean_data$Attendance)
+
+complex_residuals = resid(complex)
+predicted_values <- predict(complex)
+
+simple_residuals = resid(simple)
+simple_values <- predict(simple)
+
+plot_comple_a <- complex_data %>%
+  ggplot(aes(x=clean_data$HSC, y = complex_residuals))+
+    geom_point(alpha = 0.5) + stat_smooth(se = TRUE) + labs(title = "HS GPA Complex Model", y = "Residual")
+
+plot_comple_b <- complex_data %>%
+  ggplot(aes(x=clean_data$Gender, y = complex_residuals))+
+    geom_point(alpha = 0.5) + stat_smooth(se = TRUE) + labs(title = "Gender Complex Model", y = "Residual")
+
+plot_comple_c <- complex_data %>%
+  ggplot(aes(x=clean_data$Attendance, y = complex_residuals))+
+    geom_point(alpha = 0.5) +stat_smooth(se = TRUE) + labs(title = "Attendance Complex Model", y = "Residual")
+
+plot_comple_d <- complex_data %>%
+  ggplot(aes(x=predicted_values, y = complex_residuals))+
+    geom_point(alpha = 0.5) +stat_smooth(se = TRUE) + labs(title = "Residual vs. Predicted Complex Model", y = "Residual")
+
+plot_comple_e <- simple_data %>%
+  ggplot(aes(x=clean_data$HSC, y = simple_residuals))+
+    geom_point(alpha = 0.5) + stat_smooth(se = TRUE) + labs(title = "HS GPA Simple Model", y = "Residual")
+
+plot_comple_f <- simple_data %>%
+  ggplot(aes(x=simple_values, y = simple_residuals))+
+    geom_point(alpha = 0.5) + stat_smooth(se = TRUE) + labs(title = "Residual vs. Predicted Simple Model", y = "Residual", x = "predicted values")
+```
+
+**Linear Conditional Assumption:**
+
+```{r linear expectation plot}
+#| label: linear-plot
+#| fig.cap: 'Linear Conditional Expectation Assumption Plots'
+#| fig.width: 10
+#| fig.height: 6
+#| fig.pos: H
+
+(plot_comple_a | plot_comple_c) /(plot_comple_b | plot_comple_d)/ (plot_comple_e | plot_comple_f)
+```
+
+```{r scatterplot for homoskedastic assumption}
+plot_1 <- complex_data %>% 
+  ggplot(aes(x = predicted_values, y = complex_residuals)) + 
+  geom_point() +
+  labs(title = "Residuals vs. Predicted for Complex Model", x = "Predicted", y = "Residuals") +
+  stat_smooth(se = TRUE)
+
+plot_2 <- simple_data %>% 
+  ggplot(aes(x = simple_values, y = simple_residuals)) + 
+  geom_point() +
+  labs(title = "Residuals vs. Predicted for Simple Model", x = "Predicted", y = "Residuals") + 
+  stat_smooth(se = TRUE)
+```
+
+**No Perfect Collinearity Assumption:**
+
+```{r correlation matrix}
+clean_data$gender_binary <- ifelse(clean_data$Gender == "Female", 1, 0)
+clean_data <- clean_data %>%
+  mutate(attendance_numeric = recode(Attendance, "Extremely Low Attendance" = 0, "Low" = 1, "Medium" = 2, "High" = 3))
+
+correlation <- clean_data %>% select(HSC, gender_binary, attendance_numeric)
+matrix <- cor(correlation)
+colnames(matrix) <- c("High School GPA", "Gender", "Attendance")
+rownames(matrix) <- c("High School GPA", "Gender", "Attendance")
+matrix
+```
+
+**Homoskedastic Assumption:**
+
+```{r homoskedastic plot}
+#| label: homoskedastic-error
+#| fig.cap: 'Homoskedastic Assumption Check: Scatterplot of Residuals vs. Predicted Values for Models'
+#| fig.width: 10
+#| fig.height: 3
+#| fig.pos: H
+
+(plot_1 | plot_2)
+```
+
+*Breusch-Pagen test:*
+
+```{r bp test}
+bptest(complex)
+bptest(simple)
+```
+
+**Normally Distributed Errors Assumption:**
+
+```{r normally distributed error histograms}
+error_complex <- ggplot(complex_data, aes(x = complex_residuals)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Complex Model Residuals",
+       x = "Residuals ",
+       y = "Frequency") +
+  theme_minimal()
+
+error_simple <- ggplot(simple_data, aes(x = simple_residuals)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Simple Model Residuals",
+       x = "Residuals ",
+       y = "Frequency") +
+  theme_minimal()
+
+qq_simple <- qplot(sample = simple_residuals) + labs(title = "QQ Plot of Simple Model Residuals",
+                                                     x = "theoretical", y = "sample") + theme_minimal()
+qq_complex <- qplot(sample = simple_residuals) + labs(title = "QQ Plot of Complex Model Residuals",
+                                                      x = "theoretical", y = "sample") + theme_minimal()
+```
+
+```{r error plot}
+#| label: residual-hist
+#| fig.cap: 'Normally Distributed Error Assumption: Histograms & QQ Plot of Residuals'
+#| fig.width: 10
+#| fig.height: 4
+#| fig.pos: H
+
+(error_complex | error_simple) / (qq_complex | qq_simple)
+```
