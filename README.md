@@ -18,4 +18,6 @@ Coursework Completed:
   - Data Engineering
   - Applied Machine Learning
   - Experiments and Causal Inference
-  - Natural Language Processing with Deep Learning(in progress)
+  - Natural Language Processing with Deep Learning
+  - Machine Learning at Scale
+  - Machine Learning Engineering (in-progress)
