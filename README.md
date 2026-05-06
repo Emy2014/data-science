@@ -5,9 +5,9 @@ Yiwen Hou
 
 Data Science Portfolio
 
-hyw-emy@hotmail.com
+yiwen_hou@berkeley.edu
 
-Masters in Data Science (in progress - expected Summer 2026)
+Masters in Data Science (in progress - expected Dec 2026)
 
 Univeristy of California, Berkeley
 
@@ -20,4 +20,4 @@ Coursework Completed:
   - Experiments and Causal Inference
   - Natural Language Processing with Deep Learning
   - Machine Learning at Scale
-  - Machine Learning Engineering (in-progress)
+  - Machine Learning Systems Engineering (in-progress)
